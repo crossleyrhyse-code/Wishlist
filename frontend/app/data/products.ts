@@ -1,0 +1,138 @@
+export type WishlistProduct = {
+  id: string;
+  name: string;
+  displayName: string;
+  store: string;
+  category: string;
+  url: string;
+  targetPrice: number | null;
+  imageUrl: string | null;
+  currentPrice: number | null;
+  addedPrice: number | null;
+  priceSelector: string | null;
+  source: "legacy-desktop";
+  addedOrder: number;
+};
+
+export const wishlistProducts: WishlistProduct[] = [
+  {
+    id: "legacy-1",
+    name: "Kings 270 Awning",
+    displayName: "Kings 270 Awning",
+    store: "4WD Supacentre",
+    category: "Sports & Outdoors",
+    url: "https://www.4wdsupacentre.com.au/kings-plus-tourer-270-xl-freestanding-awning-mkii.html",
+    targetPrice: 500.0,
+    imageUrl: "https://sc-prod.4wdsc.com/media/catalog/product/a/k/akpta-awn270tourext_02-thumbnail.jpg?quality=80&bg-color=255,255,255&fit=bounds&height=&width=",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: "[itemprop='price']",
+    source: "legacy-desktop",
+    addedOrder: 8,
+  },
+  {
+    id: "legacy-2",
+    name: "Parts Cleaner from Supercheap",
+    displayName: "Parts Cleaner from Supercheap",
+    store: "Supercheap Auto",
+    category: "Automotive",
+    url: "https://www.supercheapauto.com.au/p/sca-sca-brake-parts-cleaner-400g/676373.html?cgid=SCA0108#start=2",
+    targetPrice: 9.0,
+    imageUrl: "https://www.supercheapauto.com.au/dw/image/v2/BBRV_PRD/on/demandware.static/-/Sites-srg-internal-master-catalog/default/dwff5fc874/images/676373/SCA_676373_hi-res.jpg?sw=1000&sh=1000&sm=fit&q=70",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: ".this-selector-does-not-exist",
+    source: "legacy-desktop",
+    addedOrder: 7,
+  },
+  {
+    id: "legacy-3",
+    name: "Chair",
+    displayName: "Chair",
+    store: "BCF",
+    category: "Sports & Outdoors",
+    url: "https://www.bcf.com.au/p/darche-full-moon-chair-200kg/727587.html",
+    targetPrice: 100.0,
+    imageUrl: "https://www.bcf.com.au/dw/image/v2/BBRV_PRD/on/demandware.static/-/Sites-srg-internal-master-catalog/default/dw8c8f9b17/images/727587/BCF_727587_hi-res.jpg?sw=1000&sh=1000&sm=fit&q=80",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: ".price-sales",
+    source: "legacy-desktop",
+    addedOrder: 6,
+  },
+  {
+    id: "legacy-4",
+    name: "Folding Shovel",
+    displayName: "Folding Shovel",
+    store: "4WD Supacentre",
+    category: "Tools & DIY",
+    url: "https://www.4wdsupacentre.com.au/folding-shovel.html",
+    targetPrice: 20.0,
+    imageUrl: "https://sc-prod.4wdsc.com/media/catalog/product/t/z/tza-shovel_folding_1_3.jpg?quality=80&bg-color=255,255,255&fit=bounds&height=&width=",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: "[itemprop='price']",
+    source: "legacy-desktop",
+    addedOrder: 5,
+  },
+  {
+    id: "legacy-5",
+    name: "Makita 18V 10\" 250mm Brushless Chainsaw DUC254Z - Skin Only",
+    displayName: "Makita Chainsaw",
+    store: "Bunnings",
+    category: "Tools & DIY",
+    url: "https://www.bunnings.com.au/makita-18v-10-250mm-brushless-chainsaw-duc254z-skin-only_p0046097",
+    targetPrice: 400.0,
+    imageUrl: "https://media.bunnings.com.au/api/public/content/2b6a9d94a8d14b2ab3acb12093b4c3ad?v=f0d1fefa&t=w1200",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: "[data-locator='product-price']",
+    source: "legacy-desktop",
+    addedOrder: 4,
+  },
+  {
+    id: "legacy-6",
+    name: "Dexters dog food",
+    displayName: "Dexters dog food",
+    store: "Bunnings",
+    category: "Groceries",
+    url: "https://www.bunnings.com.au/natures-goodness-400g-chicken-with-duck-and-garden-vegetables-grain-free-adult-dog-wet-food-12-pack_p0606304",
+    targetPrice: 25.0,
+    imageUrl: "https://media.bunnings.com.au/api/public/content/59b10c0bc6704a95a0db94bb45c1dbd1?v=0f8227ac&t=w1200",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: "[data-locator='product-price']",
+    source: "legacy-desktop",
+    addedOrder: 3,
+  },
+  {
+    id: "legacy-7",
+    name: "Pocket Blower",
+    displayName: "Pocket Blower",
+    store: "KickAss Products",
+    category: "Tools & DIY",
+    url: "https://kickassproducts.com.au/products/kickass-lithium-rechargeable-jet-blower-fan-for-camping?variant=51631448818036&country=AU&currency=AUD&utm_medium=product_sync&utm_source=google&utm_content=sag_organic&utm_campaign=sag_organic&tw_source=google&tw_adid=&tw_campaign=21245947896&tw_kwdid=&gad_source=1&gad_campaignid=21256390921&gbraid=0AAAAACdrog7bUU8nb4LdWEuln7P-Sc_AV&gclid=CjwKCAjwqc_UBhBKEiwAWbl25hMCPAPfIb1IGZo2BUB-B8uzgni1WWTsFktvXKfyWZTA3YwneEI86hoCVskQAvD_BwE",
+    targetPrice: 20.0,
+    imageUrl: "http://kickassproducts.com.au/cdn/shop/files/kickass-productskickass-lithium-rechargeable-jet-blower-fan-for-campingkajetfan-621746.jpg?v=1730731624",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: ".ka-price-dollars",
+    source: "legacy-desktop",
+    addedOrder: 2,
+  },
+  {
+    id: "legacy-8",
+    name: "Shimano Nasci Compact 5000XGFD Spin Reel",
+    displayName: "reel for comparison test",
+    store: "Anaconda",
+    category: "Sports & Outdoors",
+    url: "https://www.anacondastores.com/en-au/p/shimano-nasci-compact-5000xgfd-spin-reel/BP90252955-no-colour",
+    targetPrice: 100.0,
+    imageUrl: "https://www.anacondastores.com/medias/productHero-SPOTWF-BP90252955-no-colour.jpg?context=bWFzdGVyfGltYWdlc3w1MzU1MXxpbWFnZS9qcGVnfGltYWdlcy9oNTYvaDRjLzI3MDc1ODkzODg3MDA2L3Byb2R1Y3RIZXJvX1NQT1RXRl9CUDkwMjUyOTU1LW5vLWNvbG91ci5qcGd8ZjcxODU2MGY5Nzc1ZjdlZWE5MTM4MGRjNDg5OGE5MDVjMTQ2ZjdmNDY4Nzk4OTkyNzIwNzA4ZDg0MWY3M2ZkYg",
+    currentPrice: null,
+    addedPrice: null,
+    priceSelector: ".amount",
+    source: "legacy-desktop",
+    addedOrder: 1,
+  },
+];
