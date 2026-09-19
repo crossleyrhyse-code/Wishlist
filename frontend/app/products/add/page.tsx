@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { addWishlistProduct } from "../../data/wishlistProducts";
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 type AnalysedProduct = {
   url: string;

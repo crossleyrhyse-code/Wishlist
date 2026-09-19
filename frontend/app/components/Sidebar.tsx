@@ -23,7 +23,7 @@ type SupportedStore = {
   icon: string;
 };
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 function getStoreIcon(name: string) {
   if (name === "4WD Supacentre") return "4";
