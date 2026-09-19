@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { loadWishlistProducts } from "../data/wishlistProducts";
-import Sidebar from "../components/Sidebar";
 
 
 type PriceHistoryEntry = {
@@ -500,13 +499,7 @@ export default function PriceHistoryPage() {
         }
       `}</style>
 
-      <main className="site-shell">
-        <div className="background-layer" aria-hidden="true" />
-        <div className="background-shade" aria-hidden="true" />
-
-        <Sidebar />
-
-        <section className="dashboard history-page">
+      <section className="history-page">
           <header className="history-header">
             <div>
               <span className="eyebrow">PRICE TRACKING</span>
@@ -718,7 +711,6 @@ export default function PriceHistoryPage() {
             </section>
           )}
         </section>
-      </main>
     </>
   );
 }

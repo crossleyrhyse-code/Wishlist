@@ -14,6 +14,37 @@
 
 import re
 
+
+BLOCKED_PAGE_MARKERS = {
+    "403 error", "403 forbidden", "forbidden", "access denied",
+    "request blocked", "page not found", "404 error", "404 not found",
+    "service unavailable", "temporarily unavailable",
+}
+
+
+def is_valid_product_title(title):
+    """Return False for retailer error-page text masquerading as a title."""
+    cleaned = re.sub(r"\s+", " ", str(title or "")).strip()
+    if len(cleaned) < 2:
+        return False
+    lowered = cleaned.lower()
+    return not any(marker in lowered for marker in BLOCKED_PAGE_MARKERS)
+
+
+def validate_retailer_page(driver):
+    """Fail early when Selenium has landed on a blocked/error page."""
+    page_title = (driver.title or "").strip()
+    body_text = ""
+    try:
+        body_text = (driver.find_element(By.TAG_NAME, "body").text or "")[:1200]
+    except Exception:
+        pass
+    combined = f"{page_title} {body_text}".lower()
+    for marker in BLOCKED_PAGE_MARKERS:
+        if marker in combined:
+            raise ValueError(f"Retailer page unavailable: {marker}.")
+
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -106,6 +137,8 @@ def get_product_title(product, driver=None, navigate=True):
         if navigate:
             driver.get(product["url"])
 
+        validate_retailer_page(driver)
+
         try:
             title_element = WebDriverWait(
                 driver,
@@ -121,7 +154,7 @@ def get_product_title(product, driver=None, navigate=True):
 
             product_title = title_element.text.strip()
 
-            if product_title:
+            if product_title and is_valid_product_title(product_title):
                 return product_title
 
         except Exception:
@@ -139,7 +172,7 @@ def get_product_title(product, driver=None, navigate=True):
                 or ""
             ).strip()
 
-            if product_title:
+            if product_title and is_valid_product_title(product_title):
                 return product_title
 
         raise ValueError(
@@ -253,6 +286,7 @@ def get_product_price(product, driver=None):
             driver = create_price_driver()
 
         driver.get(product["url"])
+        validate_retailer_page(driver)
 
         price_element = WebDriverWait(
             driver,

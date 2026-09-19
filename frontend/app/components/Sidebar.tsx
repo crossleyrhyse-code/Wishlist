@@ -112,11 +112,12 @@ export default function Sidebar() {
   }, []);
 
   return (
+    <>
     <aside className="sidebar">
       <div className="brand">
         <div className="brand-logo-wrap">
           <Image
-            src="/assets/wishlist-logo.png"
+            src="/assets/wishlist-logo-lightmode.png"
             alt="Wishlist"
             width={64}
             height={64}
@@ -182,5 +183,28 @@ export default function Sidebar() {
         <span className="chevron">›</span>
       </button>
     </aside>
+
+    <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+      {navItems.map(([icon, label, href]) => (
+        <Link
+          key={`mobile-${label}`}
+          href={href}
+          className={`mobile-nav-item ${isActive(pathname, href) ? "active" : ""}`}
+        >
+          <span className="mobile-nav-icon">{icon}</span>
+          <span>{label === "Price Comparison" ? "Compare" : label === "Price History" ? "History" : label}</span>
+        </Link>
+      ))}
+      {isDeveloper && (
+        <Link
+          href={developerNavItem[2]}
+          className={`mobile-nav-item ${isActive(pathname, developerNavItem[2]) ? "active" : ""}`}
+        >
+          <span className="mobile-nav-icon">{developerNavItem[0]}</span>
+          <span>{developerNavItem[1]}</span>
+        </Link>
+      )}
+    </nav>
+    </>
   );
 }

@@ -3,3 +3,6 @@ uvicorn[standard]
 selenium
 python-dotenv
 resend
+requests
+beautifulsoup4
+playwright

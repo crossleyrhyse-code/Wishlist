@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { loadWishlistProducts } from "../data/wishlistProducts";
-import Sidebar from "../components/Sidebar";
 
 
 type WishlistProduct = {
@@ -297,20 +296,7 @@ export default function AlertsPage() {
         }
       `}</style>
 
-      <main className="site-shell">
-        <div
-          className="background-layer"
-          aria-hidden="true"
-        />
-
-        <div
-          className="background-shade"
-          aria-hidden="true"
-        />
-
-        <Sidebar />
-
-        <section className="dashboard alerts-page">
+      <section className="alerts-page">
           <header className="alerts-header">
             <span className="eyebrow">NOTIFICATIONS</span>
 
@@ -426,7 +412,6 @@ export default function AlertsPage() {
             )}
           </section>
         </section>
-      </main>
     </>
   );
 }

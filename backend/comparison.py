@@ -5,6 +5,7 @@
 # Regular expressions.
 # Used for cleaning product names and finding model information.
 import re
+import time
 
 # Built into Python.
 # Gives us a general text-similarity score between two strings.
@@ -335,6 +336,65 @@ def brands_match(name_a, name_b):
 # CLASSIFY PRODUCT MATCH
 # ============================================================
 
+PRODUCT_TYPE_ALIASES = {
+    "chainsaw": ("chainsaw", "chain saw"),
+    "awning": ("awning",),
+    "chair": ("chair",),
+    "mower": ("mower", "lawn mower"),
+    "fridge": ("fridge", "refrigerator"),
+    "freezer": ("freezer",),
+    "tent": ("tent",),
+    "generator": ("generator",),
+    "compressor": ("compressor",),
+    "drill": ("drill",),
+    "grinder": ("grinder",),
+    "blower": ("blower",),
+    "saw": ("circular saw", "mitre saw", "miter saw", "reciprocating saw"),
+}
+
+ACCESSORY_WORDS = {
+    "bracket", "brackets", "wall", "walls", "extension", "extensions",
+    "cover", "covers", "bag", "bags", "mount", "mounting", "holder",
+    "holders", "replacement", "spare", "adapter", "adaptor", "stand",
+    "pole", "poles", "strap", "straps", "mesh", "sidewall", "sidewalls",
+}
+
+
+def detect_product_type(name):
+    """Return a broad product identity used for discovery and guardrails."""
+    normalized = normalize_product_name(name)
+    padded = f" {normalized} "
+
+    # Prefer specific multi-word/product identities before generic "saw".
+    for product_type, aliases in PRODUCT_TYPE_ALIASES.items():
+        for alias in aliases:
+            alias_norm = normalize_product_name(alias)
+            if f" {alias_norm} " in padded:
+                return product_type
+    return None
+
+
+def _accessory_conflict(tracked_name, candidate_name):
+    """Reject obvious accessories when the tracked item is the main product."""
+    tracked_words = get_product_words(tracked_name)
+    candidate_words = get_product_words(candidate_name)
+    candidate_accessories = candidate_words.intersection(ACCESSORY_WORDS)
+    tracked_accessories = tracked_words.intersection(ACCESSORY_WORDS)
+    return bool(candidate_accessories and not tracked_accessories)
+
+
+
+def get_model_tokens(name):
+    """Extract likely manufacturer model codes such as DUC254Z."""
+    compact = re.sub(r"[^a-z0-9]+", "", str(name).lower())
+    return set(re.findall(r"[a-z]{2,}\d+[a-z0-9]*", compact))
+
+def model_relationship(name_a, name_b):
+    a, b = get_model_tokens(name_a), get_model_tokens(name_b)
+    if not a or not b:
+        return "UNKNOWN"
+    return "SAME" if a.intersection(b) else "DIFFERENT"
+
 def classify_product_match(
     name_a,
     name_b,
@@ -343,116 +403,92 @@ def classify_product_match(
     possible_threshold=0.35,
     identity_threshold=0.75
 ):
-    """
-    Classify two retailer product names as:
+    """Classify a candidate while protecting the core product identity."""
+    name_score = calculate_name_similarity(name_a, name_b)
+    identity_score = calculate_identity_similarity(name_a, name_b)
+    number_match = important_numbers_match(name_a, name_b)
+    brand_match = brands_match(name_a, name_b)
 
-        EXACT MATCH
-        SIMILAR PRODUCT
-        POSSIBLE MATCH
-        NO MATCH
-    """
+    tracked_type = detect_product_type(name_a)
+    candidate_type = detect_product_type(name_b)
+    type_match = not tracked_type or tracked_type == candidate_type
+    accessory_conflict = _accessory_conflict(name_a, name_b)
+    model_match = model_relationship(name_a, name_b)
 
-    name_score = calculate_name_similarity(
-        name_a,
-        name_b
-    )
-
-    identity_score = calculate_identity_similarity(
-        name_a,
-        name_b
-    )
-
-    number_match = important_numbers_match(
-        name_a,
-        name_b
-    )
-
-    brand_match = brands_match(
-        name_a,
-        name_b
-    )
-
-    normal_exact_match = (
-        name_score >= exact_threshold
-        and number_match
-        and brand_match
-    )
-
-    identity_exact_match = (
-        identity_score >= identity_threshold
-        and number_match
-        and brand_match
-    )
-
-    if (
-        normal_exact_match
-        or identity_exact_match
-    ):
-        match_type = "EXACT MATCH"
-
-    elif (
-        name_score >= similar_threshold
-        or identity_score >= similar_threshold
-    ):
-        match_type = "SIMILAR PRODUCT"
-
-    elif (
-        name_score >= possible_threshold
-        or identity_score >= possible_threshold
-    ):
-        match_type = "POSSIBLE MATCH"
-
-    else:
+    # A bracket/wall/cover for an awning is not an awning. Likewise, when we
+    # know both product types and they differ, similarity words must not win.
+    if accessory_conflict or not type_match:
         match_type = "NO MATCH"
+        display_score = min(max(name_score, identity_score), 0.34)
+    else:
+        normal_exact_match = (
+            name_score >= exact_threshold and number_match and brand_match and model_match != "DIFFERENT"
+        )
+        identity_exact_match = (
+            identity_score >= identity_threshold and number_match and brand_match and model_match != "DIFFERENT"
+        )
 
-    display_score = max(
-        name_score,
-        identity_score
-    )
+        if normal_exact_match or identity_exact_match:
+            match_type = "EXACT MATCH"
+        elif model_match == "DIFFERENT" and type_match:
+            match_type = "SIMILAR PRODUCT"
+        elif name_score >= similar_threshold or identity_score >= similar_threshold:
+            match_type = "SIMILAR PRODUCT"
+        elif name_score >= possible_threshold or identity_score >= possible_threshold:
+            match_type = "POSSIBLE MATCH"
+        else:
+            match_type = "NO MATCH"
+        display_score = max(name_score, identity_score)
 
     return {
         "score": display_score,
-        "percentage": round(
-            display_score * 100
-        ),
-        "name_score": round(
-            name_score * 100
-        ),
-        "identity_score": round(
-            identity_score * 100
-        ),
+        "percentage": round(display_score * 100),
+        "name_score": round(name_score * 100),
+        "identity_score": round(identity_score * 100),
         "numbers_match": number_match,
         "brand_match": brand_match,
-        "match_type": match_type
+        "product_type_match": type_match,
+        "accessory_conflict": accessory_conflict,
+        "match_type": match_type,
     }
 
+
 def build_search_terms(product_name):
+    """Build a broad shopping-intent query, not a copy of the retailer title.
+
+    Examples:
+      Kings 270 Awning -> 270 awning
+      Makita 18V 250mm Brushless Chainsaw DUC254Z -> 18v chainsaw
+      Chair -> chair
+
+    Brand/model/detail words remain available to the scorer after discovery.
     """
-    Create a cleaner search phrase from a retailer product name.
-    """
+    normalized = normalize_product_name(product_name)
+    product_type = detect_product_type(product_name)
 
-    normalized_name = normalize_product_name(
-        product_name
-    )
+    if product_type:
+        specs = []
 
-    words = normalized_name.split()
+        # Voltage is a useful broad class for cordless power tools.
+        voltage = re.search(r"\b(\d{1,3})\s*v\b", normalized)
+        if voltage:
+            specs.append(f"{voltage.group(1)}v")
 
-    useful_words = []
+        # For wrap-around awnings, the angle defines the product class.
+        if product_type == "awning":
+            angle = re.search(r"\b(180|270|360)\b", normalized)
+            if angle:
+                specs.append(angle.group(1))
 
-    for word in words:
+        return " ".join(specs + [product_type]).strip()
 
-        if word in GENERIC_PRODUCT_WORDS:
-            continue
-
-        useful_words.append(
-            word
-        )
-
-    search_text = " ".join(
-        useful_words
-    )
-
-    return search_text
+    # Unknown product category: keep the old safe fallback, but strip generic
+    # filler words rather than guessing at what the product is.
+    words = [
+        word for word in normalized.split()
+        if word not in GENERIC_PRODUCT_WORDS
+    ]
+    return " ".join(words)
 
 
 # ============================================================
@@ -460,147 +496,107 @@ def build_search_terms(product_name):
 # ============================================================
 
 def search_bcf(product_name):
-    """
-    Search BCF for products that might match the tracked product.
-
-    This search version collects product names and URLs.
-    """
-
-    search_text = build_search_terms(
-        product_name
-    )
-
-    encoded_search = quote_plus(
-        search_text
-    )
-
-    search_url = (
-        "https://www.bcf.com.au/search?q="
-        + encoded_search
-    )
+    """Search BCF with resilient page handling and useful diagnostics."""
+    search_text = build_search_terms(product_name)
+    encoded_search = quote_plus(search_text)
+    search_url = "https://www.bcf.com.au/search?q=" + encoded_search
 
     print()
     print("=" * 60)
     print("SEARCHING BCF")
     print("=" * 60)
-
-    print()
-    print(
-        f"Search Text: "
-        f"{search_text}"
-    )
-
-    print(
-        f"Search URL: "
-        f"{search_url}"
-    )
-
+    print(f"Search Text: {search_text}")
+    print(f"Search URL: {search_url}")
     print()
 
     driver = None
-
+    stage = "creating Chrome driver"
     try:
-
         driver = create_price_driver()
 
-        driver.get(
-            search_url
+        stage = "opening BCF search page"
+        driver.get(search_url)
+
+        stage = "waiting for BCF document"
+        WebDriverWait(driver, 15).until(
+            lambda d: d.execute_script("return document.readyState") in {"interactive", "complete"}
         )
 
-        WebDriverWait(
-            driver,
-            10
-        ).until(
-            EC.presence_of_element_located(
-                (
-                    By.CSS_SELECTOR,
-                    "a[href*='/p/']"
-                )
-            )
-        )
+        # BCF can hydrate its product grid after document.readyState completes.
+        # A short settle is more robust than waiting for one retailer CSS class.
+        stage = "allowing BCF results to render"
+        time.sleep(4)
 
-        # ----------------------------------------------------
-        # SNAPSHOT THE SEARCH RESULTS
-        # ----------------------------------------------------
-        #
-        # BCF dynamically refreshes parts of its search page.
-        # If Selenium keeps individual WebElement references while
-        # that happens, Chrome can report:
-        #
-        #     stale element reference
-        #
-        # Instead of looping over live WebElements, take one quick
-        # JavaScript snapshot of the matching links. The returned
-        # values are plain Python strings, so BCF can redraw the page
-        # afterwards without invalidating what we already collected.
-        raw_product_links = driver.execute_script(
+        current_url = driver.current_url or ""
+        page_title = driver.title or ""
+        body_text = ""
+        try:
+            body_text = (driver.find_element(By.TAG_NAME, "body").text or "")[:3000]
+        except Exception:
+            pass
+
+        print(f"BCF page title: {page_title}")
+        print(f"BCF final URL: {current_url}")
+
+        blocked_text = (page_title + " " + body_text).lower()
+        blocked_markers = (
+            "403 forbidden", "access denied", "request blocked",
+            "captcha", "verify you are human", "robot or human",
+        )
+        if any(marker in blocked_text for marker in blocked_markers):
+            raise RuntimeError("BCF blocked the automated search page")
+
+        stage = "reading BCF links"
+        raw_links = driver.execute_script(
             """
-            return Array.from(
-                document.querySelectorAll("a[href*='/p/']")
-            ).map(function(link) {
+            return Array.from(document.querySelectorAll('a[href]')).map(function(link) {
                 return {
-                    url: link.href || "",
-                    title: (
-                        link.innerText
-                        || link.textContent
-                        || ""
-                    ).trim()
+                    url: link.href || '',
+                    title: (link.getAttribute('aria-label') || link.getAttribute('title') ||
+                            link.innerText || link.textContent || '').trim()
                 };
             });
             """
-        )
+        ) or []
+        print(f"BCF links visible: {len(raw_links)}")
 
         results = []
         seen_urls = set()
-
-        for link_data in raw_product_links:
-
-            url = (
-                link_data.get("url")
-                or ""
-            ).strip()
-
-            title = (
-                link_data.get("title")
-                or ""
-            ).strip()
-
-            if not url:
+        for item in raw_links:
+            url = (item.get("url") or "").strip()
+            title = (item.get("title") or "").strip()
+            lower_url = url.lower()
+            if not url or not title or len(title) < 4 or url in seen_urls:
                 continue
-
-            if url in seen_urls:
+            if "bcf.com.au" not in lower_url:
                 continue
-
-            if not title:
+            # Current BCF product URLs look like /p/name/123456.html.
+            if "/p/" not in lower_url or not lower_url.endswith(".html"):
                 continue
+            seen_urls.add(url)
+            results.append({"name": title, "url": url, "price": extract_price_from_text(title)})
 
-            seen_urls.add(
-                url
-            )
+        print(f"BCF candidates collected: {len(results)}")
 
-            results.append(
-                {
-                    "name": title,
-                    "url": url
-                }
-            )
+        # Zero real product links is different from a valid zero-match result:
+        # it usually means BCF changed/blocked its rendered search page.
+        if not results:
+            snippet = " ".join(body_text.split())[:350]
+            print(f"BCF body preview: {snippet}")
+            raise RuntimeError("BCF search page loaded but no product links were readable")
 
         return results
 
     except Exception as error:
-
         print()
         print("BCF SEARCH FAILED")
-
-        print(
-            f"Reason: "
-            f"{error}"
-        )
-
-        return []
-
+        print(f"Stage: {stage}")
+        print(f"Type: {type(error).__name__}")
+        print(f"Reason: {repr(error)}")
+        raise RuntimeError(
+            f"BCF search unavailable during {stage}: {type(error).__name__}"
+        ) from error
     finally:
-
         if driver is not None:
             driver.quit()
 
@@ -634,7 +630,8 @@ def score_search_results(tracked_product_name, search_results):
             "identity_score": match_result["identity_score"],
             "numbers_match": match_result["numbers_match"],
             "brand_match": match_result["brand_match"],
-            "match_type": match_result["match_type"]
+            "match_type": match_result["match_type"],
+            "price": result.get("price"),
         }
 
         scored_results.append(
@@ -974,6 +971,17 @@ if __name__ == "__main__":
 # MULTI-RETAILER SEARCH V2
 # ============================================================
 
+
+def extract_price_from_text(text):
+    """Extract a visible AUD price from retailer search-result text."""
+    matches = re.findall(r"\$\s*([0-9][0-9,]*(?:\.\d{1,2})?)", str(text or ""))
+    if not matches:
+        return None
+    try:
+        return float(matches[-1].replace(",", ""))
+    except ValueError:
+        return None
+
 def _snapshot_search_links(driver, selectors):
     """
     Take a stable snapshot of candidate product links from a retailer
@@ -1015,7 +1023,7 @@ def _snapshot_search_links(driver, selectors):
             continue
 
         seen_urls.add(url)
-        results.append({"name": title, "url": url})
+        results.append({"name": title, "url": url, "price": extract_price_from_text(title)})
 
     return results
 
@@ -1108,6 +1116,10 @@ def get_live_retailer_price(store_name, candidate):
 
     if candidate is None:
         return None
+
+    embedded_price = candidate.get("price")
+    if embedded_price is not None:
+        return float(embedded_price)
 
     price_selector = get_price_selector(store_name)
 

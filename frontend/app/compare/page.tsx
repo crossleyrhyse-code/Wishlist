@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { loadWishlistProducts } from "../data/wishlistProducts";
 
-import Sidebar from "../components/Sidebar";
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 type WishlistProduct = {
@@ -29,6 +28,7 @@ type ComparisonCandidate = {
   identityScore: number;
   numbersMatch: boolean;
   brandMatch: boolean;
+  reasons?: string[];
   matchType: MatchType;
   price: number | null;
   priceError: string | null;
@@ -64,9 +64,6 @@ type ComparisonResponse = {
 };
 
 
-const AVAILABLE_COMPARE_STORES = ["BCF", "Bunnings"] as const;
-
-
 function money(value: number | null) {
   if (value === null) return "—";
 
@@ -92,46 +89,55 @@ export default function Page() {
   const [error, setError] = useState("");
   const [openRetailers, setOpenRetailers] = useState<Record<string, boolean>>({});
   const [storeMenuOpen, setStoreMenuOpen] = useState(false);
-  const [selectedStores, setSelectedStores] = useState<string[]>([
-    "BCF",
-    "Bunnings",
-  ]);
+  const [availableCompareStores, setAvailableCompareStores] = useState<string[]>([]);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [loadingMoreStores, setLoadingMoreStores] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    async function loadProducts() {
+    async function loadComparisonPage() {
       try {
-        const data = (await loadWishlistProducts()) as WishlistProduct[];
-        setProducts(data);
+        const [productData, storeResponse] = await Promise.all([
+          loadWishlistProducts() as Promise<WishlistProduct[]>,
+          fetch(`${API_BASE_URL}/compare/stores`, { cache: "no-store" }),
+        ]);
+
+        if (!storeResponse.ok) {
+          throw new Error("Could not load comparison stores.");
+        }
+
+        const storeData = (await storeResponse.json()) as { stores?: string[] };
+        const stores = Array.isArray(storeData.stores) ? storeData.stores : [];
+
+        setProducts(productData);
+        setAvailableCompareStores(stores);
         setError("");
 
-        if (data.length > 0) {
-          setSelectedProductId(data[0].id);
-          setSelectedStores(
-            AVAILABLE_COMPARE_STORES.filter(
-              (store) =>
-                store.toLowerCase() !== data[0].store.toLowerCase(),
-            ),
-          );
+        if (productData.length > 0) {
+          setSelectedProductId(productData[0].id);
+          // Comparison V2 intentionally allows same-store alternatives.
+          setSelectedStores(stores);
         } else {
           setSelectedProductId("");
+          setSelectedStores([]);
           setResult(null);
         }
       } catch (loadError) {
         setProducts([]);
+        setAvailableCompareStores([]);
         setSelectedProductId("");
+        setSelectedStores([]);
         setResult(null);
         setError(
           loadError instanceof Error
             ? loadError.message
-            : "Could not load your tracked products.",
+            : "Could not load the comparison page.",
         );
       } finally {
         setLoadingProducts(false);
       }
     }
 
-    loadProducts();
+    loadComparisonPage();
   }, []);
 
   const selectedProduct = useMemo(
@@ -158,6 +164,7 @@ export default function Page() {
           },
           body: JSON.stringify({
             selectedStores,
+            product: selectedProduct,
           }),
         },
       );
@@ -197,6 +204,12 @@ export default function Page() {
         )}?offset=${offset}&limit=5`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            product: selectedProduct,
+          }),
         },
       );
 
@@ -273,6 +286,12 @@ export default function Page() {
       <style jsx global>{`
         .comparison-dashboard {
           min-width: 0;
+          color: #0f172a;
+        }
+
+        .comparison-dashboard .card,
+        .comparison-dashboard .glass-card {
+          color: #0f172a;
         }
 
         .comparison-header {
@@ -292,7 +311,7 @@ export default function Page() {
 
         .comparison-header p {
           margin: 0;
-          color: rgba(236, 244, 243, 0.62);
+          color: #64748b;
         }
 
         .comparison-shell {
@@ -324,7 +343,7 @@ export default function Page() {
           font-weight: 800;
           letter-spacing: 0.08em;
           text-transform: uppercase;
-          color: rgba(235, 243, 242, 0.5);
+          color: #64748b;
         }
 
         .compare-select {
@@ -332,9 +351,9 @@ export default function Page() {
           width: 100%;
           padding: 0 14px;
           border-radius: 11px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid #dbe4ea;
           background: rgba(3, 13, 15, 0.76);
-          color: rgba(248, 251, 250, 0.96);
+          color: #0f172a;
           font: inherit;
           font-weight: 700;
           outline: none;
@@ -372,14 +391,14 @@ export default function Page() {
           width: 290px;
           padding: 12px;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(7, 17, 19, 0.98);
-          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
         }
 
         .store-picker-title {
           margin-bottom: 8px;
-          color: rgba(248, 251, 250, 0.94);
+          color: #0f172a;
           font-size: 12px;
           font-weight: 900;
         }
@@ -392,12 +411,12 @@ export default function Page() {
           align-items: center;
           padding: 7px 8px;
           border-radius: 8px;
-          color: rgba(242, 248, 247, 0.9);
+          color: #334155;
           cursor: pointer;
         }
 
         .store-picker-option:hover {
-          background: rgba(52, 238, 182, 0.045);
+          background: #f0fdf7;
         }
 
         .store-picker-option.disabled {
@@ -410,7 +429,7 @@ export default function Page() {
         }
 
         .store-picker-option small {
-          color: rgba(235, 243, 242, 0.45);
+          color: #64748b;
           font-size: 9px;
         }
 
@@ -465,8 +484,13 @@ export default function Page() {
         }
 
         .compare-product-copy span {
-          color: rgba(235, 243, 242, 0.58);
+          color: #64748b;
           font-size: 12px;
+        }
+
+        .compare-product-copy .compare-label {
+          color: #64748b;
+          font-weight: 800;
         }
 
         .compare-metric {
@@ -536,7 +560,7 @@ export default function Page() {
         }
 
         .retailer-heading span {
-          color: rgba(235, 243, 242, 0.54);
+          color: #64748b;
           font-size: 11px;
         }
 
@@ -610,8 +634,8 @@ export default function Page() {
           min-height: 40px;
           padding: 0 14px;
           border-radius: 9px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: rgba(248, 251, 250, 0.92);
+          border: 1px solid #dbe4ea;
+          color: #334155;
           text-decoration: none;
           font-weight: 800;
           font-size: 12px;
@@ -624,7 +648,7 @@ export default function Page() {
           align-items: center;
           justify-content: center;
           text-align: center;
-          color: rgba(235, 243, 242, 0.55);
+          color: #64748b;
         }
 
         .comparison-error {
@@ -649,14 +673,14 @@ export default function Page() {
           align-items: center;
           justify-content: space-between;
           background: transparent;
-          color: rgba(248, 251, 250, 0.94);
+          color: #0f172a;
           font: inherit;
           font-weight: 800;
           cursor: pointer;
         }
 
         .candidate-list {
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          border-top: 1px solid #e2e8f0;
         }
 
         .candidate-row {
@@ -665,7 +689,7 @@ export default function Page() {
           gap: 14px;
           align-items: center;
           padding: 13px 18px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+          border-bottom: 1px solid #e2e8f0;
         }
 
         .candidate-row:last-child {
@@ -679,7 +703,7 @@ export default function Page() {
         }
 
         .candidate-copy span {
-          color: rgba(235, 243, 242, 0.5);
+          color: #64748b;
           font-size: 10px;
         }
 
@@ -716,7 +740,7 @@ export default function Page() {
         }
 
         .comparison-summary-metrics span {
-          color: rgba(235, 243, 242, 0.5);
+          color: #64748b;
           font-size: 10px;
           font-weight: 800;
           text-transform: uppercase;
@@ -776,12 +800,12 @@ export default function Page() {
           min-height: 48px;
           padding: 0 20px;
           border: 0;
-          border-top: 1px solid rgba(255, 255, 255, 0.065);
+          border-top: 1px solid #e2e8f0;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: rgba(255, 255, 255, 0.015);
-          color: rgba(248, 251, 250, 0.88);
+          background: #f8fafc;
+          color: #334155;
           font: inherit;
           font-size: 12px;
           font-weight: 800;
@@ -803,7 +827,7 @@ export default function Page() {
 
         .candidate-price {
           font-weight: 800;
-          color: rgba(248, 251, 250, 0.96);
+          color: #0f172a;
         }
 
 
@@ -842,7 +866,7 @@ export default function Page() {
         }
 
         .possible-only-panel > span {
-          color: rgba(235, 243, 242, 0.54);
+          color: #64748b;
           font-size: 12px;
         }
 
@@ -858,7 +882,7 @@ export default function Page() {
         }
 
         .retailer-no-match span {
-          color: rgba(235, 243, 242, 0.54);
+          color: #64748b;
           font-size: 12px;
         }
 
@@ -940,13 +964,7 @@ export default function Page() {
         }
       `}</style>
 
-      <main className="site-shell">
-        <div className="background-layer" aria-hidden="true" />
-        <div className="background-shade" aria-hidden="true" />
-
-        <Sidebar />
-
-        <section className="dashboard comparison-dashboard">
+      <section className="comparison-dashboard">
           <header className="comparison-header">
             <div>
               <span className="eyebrow">FIND THE BETTER DEAL</span>
@@ -974,13 +992,8 @@ export default function Page() {
                     setError("");
                     setStoreMenuOpen(false);
 
-                    setSelectedStores(
-                      AVAILABLE_COMPARE_STORES.filter(
-                        (store) =>
-                          store.toLowerCase() !==
-                          (nextProduct?.store ?? "").toLowerCase(),
-                      ),
-                    );
+                    // V2 can compare alternatives from the tracked retailer too.
+                    setSelectedStores(availableCompareStores);
                   }}
                   disabled={loadingProducts || products.length === 0}
                 >
@@ -1008,7 +1021,7 @@ export default function Page() {
                       Choose stores to search
                     </div>
 
-                    {AVAILABLE_COMPARE_STORES.map((store) => {
+                    {availableCompareStores.map((store) => {
                       const isCurrentStore =
                         selectedProduct?.store?.toLowerCase() ===
                         store.toLowerCase();
@@ -1017,14 +1030,11 @@ export default function Page() {
                       return (
                         <label
                           key={store}
-                          className={`store-picker-option ${
-                            isCurrentStore ? "disabled" : ""
-                          }`}
+                          className="store-picker-option"
                         >
                           <input
                             type="checkbox"
                             checked={checked}
-                            disabled={isCurrentStore}
                             onChange={(event) => {
                               setSelectedStores((current) =>
                                 event.target.checked
@@ -1035,7 +1045,7 @@ export default function Page() {
                           />
                           <span>{store}</span>
                           {isCurrentStore ? (
-                            <small>Current store</small>
+                            <small>Also searches alternatives here</small>
                           ) : null}
                         </label>
                       );
@@ -1290,8 +1300,7 @@ export default function Page() {
 
                             {strongest.priceError ? (
                               <div className="comparison-warning">
-                                Live price could not be read:{" "}
-                                {strongest.priceError}
+                                Live price temporarily unavailable.
                               </div>
                             ) : null}
 
@@ -1325,12 +1334,9 @@ export default function Page() {
                                         <div className="candidate-copy">
                                           <strong>{candidate.name}</strong>
                                           <span>
-                                            Name {candidate.nameScore}% ·
-                                            Identity {candidate.identityScore}% ·
-                                            Models{" "}
-                                            {candidate.numbersMatch
-                                              ? "match"
-                                              : "differ"}
+                                            {candidate.reasons?.length
+                                              ? candidate.reasons.join(" · ")
+                                              : `${candidate.percentage}% match confidence`}
                                           </span>
                                         </div>
 
@@ -1425,12 +1431,9 @@ export default function Page() {
                                         <div className="candidate-copy">
                                           <strong>{candidate.name}</strong>
                                           <span>
-                                            Name {candidate.nameScore}% ·
-                                            Identity {candidate.identityScore}% ·
-                                            Models{" "}
-                                            {candidate.numbersMatch
-                                              ? "match"
-                                              : "differ"}
+                                            {candidate.reasons?.length
+                                              ? candidate.reasons.join(" · ")
+                                              : `${candidate.percentage}% match confidence`}
                                           </span>
                                         </div>
 
@@ -1504,7 +1507,6 @@ export default function Page() {
             ) : null}
           </div>
         </section>
-      </main>
     </>
   );
 }

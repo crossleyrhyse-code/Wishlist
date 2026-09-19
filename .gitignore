@@ -41,14 +41,17 @@ backend/.venv/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs / temporary files
 *.log
-
-# Temporary files
 *.tmp
 *.temp
-# Legacy local product data
-backend/products.json
 
-# Legacy local product data
+# Local runtime data
 backend/products.json
+backend/comparison_cache.json
+backend/settings.json
+
+# One-off retailer discovery/debug artefacts
+backend/jbhifi_search_debug.html
+backend/comparison_v2.zip
+backend/comparison_v2/tests/live/kmart_capture_output.json
