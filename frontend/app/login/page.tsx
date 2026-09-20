@@ -56,16 +56,24 @@ export default function LoginPage() {
         .auth-card {
           width: min(460px, 100%);
           padding: 28px;
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid #dbe4e8;
+          box-shadow: 0 18px 50px rgba(20, 33, 61, 0.10);
         }
 
         .auth-card h2 {
           margin: 5px 0 7px;
           font-size: 32px;
+          color: #14213d;
+        }
+
+        .auth-card .eyebrow {
+          color: #64748b;
         }
 
         .auth-card > p {
           margin: 0 0 24px;
-          color: rgba(235, 243, 242, 0.55);
+          color: #64748b;
           line-height: 1.55;
           font-size: 13px;
         }
@@ -81,7 +89,7 @@ export default function LoginPage() {
         }
 
         .auth-field span {
-          color: rgba(235, 243, 242, 0.55);
+          color: #64748b;
           font-size: 10px;
           font-weight: 800;
           letter-spacing: 0.07em;
@@ -94,16 +102,16 @@ export default function LoginPage() {
           padding: 0 14px;
           box-sizing: border-box;
           border-radius: 11px;
-          border: 1px solid rgba(255, 255, 255, 0.09);
-          background: rgba(4, 14, 16, 0.72);
-          color: rgba(248, 251, 250, 0.96);
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          color: #14213d;
           outline: none;
           font: inherit;
         }
 
         .auth-field input:focus {
-          border-color: rgba(52, 238, 182, 0.35);
-          box-shadow: 0 0 0 3px rgba(52, 238, 182, 0.07);
+          border-color: #16c784;
+          box-shadow: 0 0 0 3px rgba(22, 199, 132, 0.12);
         }
 
         .auth-submit {
@@ -136,14 +144,14 @@ export default function LoginPage() {
         .auth-footer {
           margin-top: 20px;
           padding-top: 18px;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-          color: rgba(235, 243, 242, 0.52);
+          border-top: 1px solid #e2e8f0;
+          color: #64748b;
           font-size: 12px;
           text-align: center;
         }
 
         .auth-footer a {
-          color: var(--mint);
+          color: #08a968;
           font-weight: 800;
           text-decoration: none;
         }

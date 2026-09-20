@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { loadWishlistProducts } from "./data/wishlistProducts";
+import { createClient } from "../utils/supabase/client";
 type PriceHistoryEntry = {
   checkedAt: string;
   price: number;
@@ -223,12 +224,62 @@ function ProductThumb({ product }: { product: WishlistProduct }) {
   return <div className="product-thumb">◫</div>;
 }
 
+function PublicLanding() {
+  return (
+    <section className="public-landing">
+      <div className="public-landing-inner">
+        <div className="public-brand-mark" aria-hidden="true">$</div>
+        <span className="public-eyebrow">SMARTER SHOPPING STARTS HERE</span>
+        <h1>Wish for it.<br /><span>Watch the price.</span></h1>
+        <p>
+          Keep the things you want in one place, track their prices and see
+          where you can get them for less.
+        </p>
+
+        <div className="public-actions">
+          <Link href="/signup" className="public-primary-action">Create an account</Link>
+          <Link href="/login" className="public-secondary-action">Log in</Link>
+        </div>
+
+        <div className="public-benefits" aria-label="Wishlist benefits">
+          <div><strong>Track</strong><span>Products you actually want</span></div>
+          <div><strong>Compare</strong><span>Prices across supported stores</span></div>
+          <div><strong>Save</strong><span>Know when the price is right</span></div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const [products, setProducts] = useState<WishlistProduct[]>([]);
   const [loadError, setLoadError] = useState("");
   const [sort, setSort] = useState("recent");
   const [trendProductId, setTrendProductId] = useState("");
   const [trendRange, setTrendRange] = useState("6");
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(Boolean(user));
+      setAuthChecked(true);
+    }
+
+    void checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(Boolean(session?.user));
+      setAuthChecked(true);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     async function loadProducts() {
@@ -564,6 +615,15 @@ export default function Home() {
 
     return { plotted, line, area, minPrice, maxPrice, yTicks };
   }, [trendData.points]);
+
+  if (!authChecked) {
+    return <div className="public-auth-loading" aria-label="Loading Wishlist" />;
+  }
+
+  if (!isLoggedIn) {
+    return <PublicLanding />;
+  }
+
 
   return (
     <>
